@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* Bảng màu: nền tối kiểu phòng chiếu, đỏ là màu thương hiệu (nút chính, ghế đang chọn), vàng cho điểm nhấn (giá, sao). */
+@theme {
+  --color-ink-950: #07070b;
+  --color-ink-900: #0d0d13;
+  --color-ink-850: #12121a;
+  --color-ink-800: #181822;
+  --color-ink-700: #22222e;
+  --color-ink-600: #2f2f3d;
+  --color-ink-500: #4a4a5c;
+  --color-ink-400: #8c8ca0;
+  --color-ink-300: #b6b6c6;
+  --color-ink-100: #ececf3;
+
+  --color-brand-300: #ff7a82;
+  --color-brand-400: #ff3b47;
+  --color-brand-500: #e50914;
+  --color-brand-600: #c00610;
+  --color-brand-700: #8f050c;
+
+  --color-gold-300: #ffe08a;
+  --color-gold-400: #fcc93a;
+  --color-gold-500: #f2b40c;
+
+  --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pop: pop 0.22s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@keyframes pop {
+  from { transform: scale(0.85); }
+  to { transform: scale(1); }
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  background-image:
+    radial-gradient(1200px 500px at 50% -200px, rgb(229 9 20 / 0.16), transparent 70%),
+    radial-gradient(800px 400px at 100% 0%, rgb(252 201 58 / 0.05), transparent 70%);
+  background-repeat: no-repeat;
+  color: var(--color-ink-100);
+}
+
+::selection {
+  background: rgb(229 9 20 / 0.45);
+}
+
+/* Thanh cuộn mảnh, hợp nền tối */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-600) transparent;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-ink-800) 0%, var(--color-ink-700) 50%, var(--color-ink-800) 100%);
+  background-size: 800px 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Màn hình chiếu cong phía trên sơ đồ ghế */
+.screen-curve {
+  height: 56px;
+  border-top: 4px solid var(--color-brand-400);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(to bottom, rgb(255 59 71 / 0.28), transparent 80%);
+  box-shadow: 0 -10px 40px -10px rgb(255 59 71 / 0.6);
+}
+
+/* Đường răng cưa giữa 2 nửa vé */
+.ticket-cut {
+  background-image: radial-gradient(circle at 10px 50%, transparent 9px, var(--color-ink-800) 10px);
+  background-size: 20px 100%;
+}
