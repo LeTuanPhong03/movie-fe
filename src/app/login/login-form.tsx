@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { authStore } from "@/lib/auth-store";

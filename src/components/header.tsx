@@ -6,10 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ChevronDown, Film, LayoutDashboard, LogOut, Menu, Ticket, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notifications, toast } from "@/lib/notify";
 import { logout } from "@/lib/api";
 import { useMounted, useSession } from "@/lib/hooks";
 import { LinkButton } from "./ui";
+import { NotificationBell } from "./notification-bell";
 
 const nav = [
   { href: "/", label: "Trang chủ" },
@@ -69,6 +70,7 @@ export function Header() {
     await logout();
     queryClient.removeQueries({ queryKey: ["reservations"] });
     queryClient.removeQueries({ queryKey: ["reservation"] });
+    notifications.clear();
     toast.success("Đã đăng xuất");
     router.push("/");
   };
@@ -112,6 +114,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          {mounted && <NotificationBell />}
           {!mounted ? (
             <div className="h-9 w-28" />
           ) : user ? (

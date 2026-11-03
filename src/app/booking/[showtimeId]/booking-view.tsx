@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { ArrowLeft, CalendarDays, Clock, MapPin, RefreshCw, Ticket } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { keys, useMovieLookup, useSeatMap, useShowtime } from "@/lib/queries";
@@ -52,8 +52,10 @@ export function BookingView({ showtimeId }: { showtimeId: number }) {
     [selectedIds, seatsById, seatMap.data],
   );
   const notified = useRef(new Set<number>());
+  // Đang gửi / vừa đặt xong: ghế chuyển Held là do CHÍNH mình giữ, không phải người khác → không cảnh báo
+  const reserving = useRef(false);
   useEffect(() => {
-    if (!seatMap.data) return;
+    if (!seatMap.data || reserving.current) return;
     const lost = selectedIds.filter((id) => !selected.includes(id) && !notified.current.has(id));
     if (lost.length > 0) {
       lost.forEach((id) => notified.current.add(id));
@@ -82,7 +84,11 @@ export function BookingView({ showtimeId }: { showtimeId: number }) {
 
   const reserve = useMutation({
     mutationFn: () => api<ReservationDto>("/api/reservations", { method: "POST", body: { showtimeId, seatIds: selected } }),
+    onMutate: () => {
+      reserving.current = true;
+    },
     onSuccess: (reservation) => {
+      setSelectedIds([]);
       sessionStorage.removeItem(storageKey(showtimeId));
       queryClient.setQueryData(keys.reservation(reservation.id), reservation);
       queryClient.invalidateQueries({ queryKey: keys.seats(showtimeId) });
@@ -91,6 +97,7 @@ export function BookingView({ showtimeId }: { showtimeId: number }) {
       router.push(`/checkout/${reservation.id}`);
     },
     onError: (error) => {
+      reserving.current = false;
       // 409: ghế vừa bị người khác giữ (BE chống double-booking) → tải lại sơ đồ để khách chọn lại
       if (error instanceof ApiError && error.status === 409) {
         seatMap.refetch();
@@ -213,7 +220,7 @@ export function BookingView({ showtimeId }: { showtimeId: number }) {
                 loading={reserve.isPending}
                 onClick={onContinue}
               >
-                <Ticket className="size-5" /> {session ? "Giữ ghế & thanh toán" : "Đăng nhập để đặt vé"}
+                <Ticket className="size-5" /> {session ? "Thanh toán" : "Đăng nhập để đặt vé"}
               </Button>
               <p className="mt-3 text-center text-xs text-ink-500">Ghế được giữ 10 phút sau khi bấm.</p>
             </div>
@@ -232,7 +239,7 @@ export function BookingView({ showtimeId }: { showtimeId: number }) {
             <p className="text-xl font-black text-gold-400">{formatMoney(total)}</p>
           </div>
           <Button disabled={selectedSeats.length === 0 || !!started} loading={reserve.isPending} onClick={onContinue}>
-            {session ? "Tiếp tục" : "Đăng nhập"}
+            {session ? "Thanh toán" : "Đăng nhập"}
           </Button>
         </div>
       </div>

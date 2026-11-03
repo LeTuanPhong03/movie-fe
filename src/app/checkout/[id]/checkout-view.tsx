@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import clsx from "clsx";
 import { AlarmClock, CheckCircle2, CreditCard, FlaskConical, ShieldCheck, TicketX } from "lucide-react";
 import { api, ApiError } from "@/lib/api";

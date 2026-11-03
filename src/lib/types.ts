@@ -8,6 +8,8 @@ export interface UserDto {
   email: string;
   fullName: string;
   role: Role;
+  /** Admin tạo từ cấu hình BE: không ai đổi được quyền, chỉ Owner hạ được Admin khác. */
+  isOwner: boolean;
 }
 
 export interface AuthResponse {

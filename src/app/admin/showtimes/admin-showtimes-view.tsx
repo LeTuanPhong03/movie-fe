@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { CalendarX2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useMovies, useShowtimesByDate, useTheaters } from "@/lib/queries";

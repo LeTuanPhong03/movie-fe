@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Search, ShieldCheck, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { useUsers } from "@/lib/queries";
@@ -69,6 +69,8 @@ export function AdminUsersView() {
                 {data.items.map((u) => {
                   const isMe = session?.user.id === u.id;
                   const next: Role = u.role === "Admin" ? "Customer" : "Admin";
+                  // Chỉ để ẩn nút — BE vẫn tự kiểm 3 luật (Owner bất khả xâm phạm, chỉ Owner hạ Admin)
+                  const allowed = !u.isOwner && (next === "Admin" || !!session?.user.isOwner);
                   return (
                     <tr key={u.id} className="hover:bg-ink-850/60">
                       <td className="px-4 py-3">
@@ -78,7 +80,7 @@ export function AdminUsersView() {
                       <td className="px-4 py-3">
                         {u.role === "Admin" ? (
                           <span className="inline-flex items-center gap-1 text-gold-300">
-                            <ShieldCheck className="size-4" /> Admin
+                            <ShieldCheck className="size-4" /> {u.isOwner ? "Owner" : "Admin"}
                           </span>
                         ) : (
                           <span className="text-ink-300">Customer</span>
@@ -87,6 +89,8 @@ export function AdminUsersView() {
                       <td className="px-4 py-3 text-right">
                         {isMe ? (
                           <span className="text-xs text-ink-500">Bạn</span>
+                        ) : !allowed ? (
+                          <span className="text-xs text-ink-500">{u.isOwner ? "Không đổi được" : "Chỉ Owner hạ được"}</span>
                         ) : (
                           <Button size="sm" variant={next === "Admin" ? "outline" : "danger"} onClick={() => setTarget({ user: u, role: next })}>
                             {next === "Admin" ? "Nâng lên Admin" : "Hạ về Customer"}
