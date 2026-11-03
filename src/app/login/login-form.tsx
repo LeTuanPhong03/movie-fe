@@ -9,7 +9,8 @@ import { Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { authStore } from "@/lib/auth-store";
 import type { AuthResponse } from "@/lib/types";
-import { AuthShell, safeNext } from "@/components/auth-shell";
+import { AuthShell } from "@/components/auth-shell";
+import { safeNext } from "@/lib/safe-next";
 import { Button, Field } from "@/components/ui";
 
 export function LoginForm() {

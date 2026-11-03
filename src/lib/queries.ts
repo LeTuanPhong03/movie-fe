@@ -7,6 +7,8 @@ import type {
   CapacityReportDto,
   MovieDto,
   PagedResult,
+  PaymentStatus,
+  RefundDto,
   ReservationDto,
   ReservationStatus,
   RevenueGroupBy,
@@ -31,6 +33,7 @@ export const keys = {
   theaters: ["theaters"] as const,
   users: (search: string, page: number) => ["users", search, page] as const,
   adminReservations: (filter: AdminReservationFilter) => ["admin-reservations", filter] as const,
+  refunds: (status: PaymentStatus, page: number) => ["refunds", status, page] as const,
 };
 
 export interface AdminReservationFilter {
@@ -153,6 +156,14 @@ export function useAdminReservations(filter: AdminReservationFilter) {
       api<PagedResult<AdminReservationDto>>("/api/admin/reservations", {
         query: { status: filter.status, showtimeId: filter.showtimeId, page: filter.page, pageSize: 20 },
       }),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useRefunds(status: PaymentStatus, page: number) {
+  return useQuery({
+    queryKey: keys.refunds(status, page),
+    queryFn: () => api<PagedResult<RefundDto>>("/api/admin/refunds", { query: { status, page, pageSize: 20 } }),
     placeholderData: (prev) => prev,
   });
 }

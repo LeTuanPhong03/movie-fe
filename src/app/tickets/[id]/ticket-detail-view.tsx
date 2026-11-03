@@ -17,6 +17,7 @@ import {
   formatWeekday,
   parseUtc,
 } from "@/lib/format";
+import { PAID_CANCEL_CUTOFF_MINUTES } from "@/lib/types";
 import { seatLabel } from "@/components/reservation-summary";
 import {
   Button,
@@ -86,9 +87,12 @@ export function TicketDetailView({ id }: { id: number }) {
   }
 
   const notStarted = now !== null && parseUtc(r.startAt).getTime() > now;
-  // BE cho huỷ đơn Pending/Confirmed của suất chưa chiếu (đơn Confirmed huỷ thì cần hoàn tiền tay)
+  // Khớp luật BE: Pending huỷ được tới giờ chiếu; vé đã thanh toán phải còn hơn PAID_CANCEL_CUTOFF_MINUTES
+  const beforeCutoff =
+    now !== null && parseUtc(r.startAt).getTime() - now > PAID_CANCEL_CUTOFF_MINUTES * 60_000;
   const canCancel =
-    (r.status === "Pending" || r.status === "Confirmed") && notStarted;
+    (r.status === "Pending" && notStarted) || (r.status === "Confirmed" && beforeCutoff);
+  const tooLateToCancel = r.status === "Confirmed" && notStarted && !beforeCutoff;
   const valid = r.status === "Confirmed";
   const code = `MV${r.id.toString().padStart(6, "0")}`;
 
@@ -186,6 +190,11 @@ export function TicketDetailView({ id }: { id: number }) {
               Huỷ vé
             </Button>
           )}
+          {tooLateToCancel && (
+            <p className="text-center text-xs text-ink-500">
+              Vé đã thanh toán chỉ huỷ được trước giờ chiếu {PAID_CANCEL_CUTOFF_MINUTES / 60} tiếng.
+            </p>
+          )}
         </div>
 
         <div data-ticket-keep>
@@ -197,7 +206,7 @@ export function TicketDetailView({ id }: { id: number }) {
             title="Huỷ vé này?"
             description={
               r.status === "Confirmed"
-                ? "Vé đã thanh toán. Sau khi huỷ, ghế được nhả và bạn cần liên hệ rạp để được hoàn tiền."
+                ? "Vé đã thanh toán. Sau khi huỷ, ghế được nhả và yêu cầu hoàn tiền được gửi tới rạp — tiền sẽ hoàn về tài khoản bạn đã dùng để thanh toán."
                 : "Ghế bạn đang giữ sẽ được nhả cho người khác."
             }
             confirmLabel="Huỷ vé"

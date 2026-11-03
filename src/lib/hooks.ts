@@ -4,9 +4,14 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { authStore } from "./auth-store";
 import { toVnDateString } from "./format";
 
-/** Phiên đăng nhập hiện tại. Lúc prerender trên server luôn là null (server không có localStorage). */
+/** Phiên đăng nhập hiện tại. Lúc prerender trên server luôn là null. Null cũng có thể là "chưa khôi phục xong" → xem useAuthReady. */
 export function useSession() {
   return useSyncExternalStore(authStore.subscribe, authStore.get, () => null);
+}
+
+/** true khi đã biết chắc là khách hay đã đăng nhập (lần gọi /refresh lúc mở trang đã xong). */
+export function useAuthReady() {
+  return useSyncExternalStore(authStore.subscribe, authStore.isReady, () => false);
 }
 
 const noop = () => () => {};

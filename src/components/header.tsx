@@ -8,7 +8,7 @@ import { ChevronDown, Film, LayoutDashboard, LogOut, Menu, Ticket, X } from "luc
 import { useQueryClient } from "@tanstack/react-query";
 import { notifications, toast } from "@/lib/notify";
 import { logout } from "@/lib/api";
-import { useMounted, useSession } from "@/lib/hooks";
+import { useAuthReady, useMounted, useSession } from "@/lib/hooks";
 import { LinkButton } from "./ui";
 import { NotificationBell } from "./notification-bell";
 
@@ -37,6 +37,7 @@ export function Header() {
   const router = useRouter();
   const session = useSession();
   const mounted = useMounted();
+  const ready = useAuthReady();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -75,7 +76,7 @@ export function Header() {
     router.push("/");
   };
 
-  const user = mounted ? session?.user : undefined;
+  const user = ready ? session?.user : undefined;
   const initials = user?.fullName
     .split(" ")
     .filter(Boolean)
@@ -115,7 +116,7 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           {mounted && <NotificationBell />}
-          {!mounted ? (
+          {!ready ? (
             <div className="h-9 w-28" />
           ) : user ? (
             <div ref={menuRef} className="relative hidden md:block">

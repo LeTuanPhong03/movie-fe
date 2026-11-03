@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
-import { useMounted, useSession } from "@/lib/hooks";
+import { useAuthReady, useSession } from "@/lib/hooks";
 import { Container, EmptyState, LinkButton, Spinner } from "./ui";
 
 /**
@@ -12,15 +12,16 @@ import { Container, EmptyState, LinkButton, Spinner } from "./ui";
  */
 export function RequireAuth({ children, role }: { children: ReactNode; role?: "Admin" }) {
   const session = useSession();
-  const mounted = useMounted();
+  // Chờ khôi phục phiên (F5 → /refresh) xong mới quyết định, không thì người đã đăng nhập bị đá sang /login
+  const ready = useAuthReady();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (mounted && !session) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [mounted, session, router, pathname]);
+    if (ready && !session) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [ready, session, router, pathname]);
 
-  if (!mounted || !session) {
+  if (!ready || !session) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
         <Spinner className="size-8" />

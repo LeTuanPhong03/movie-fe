@@ -1,8 +1,6 @@
-import { authStore } from "./auth-store";
+import { authStore, LOGGED_IN_KEY } from "./auth-store";
 import { parseUtc } from "./format";
 import type { AuthResponse, ProblemDetails } from "./types";
-
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5161").replace(/\/$/, "");
 
 /** Lỗi từ API, mang theo ProblemDetails để hiển thị đúng thông điệp tiếng Việt BE đã viết sẵn. */
 export class ApiError extends Error {
@@ -43,29 +41,34 @@ interface RequestOptions {
   auth?: boolean;
 }
 
+// Đường dẫn tương đối, cùng origin với FE: next.config.ts (rewrites) chuyển tiếp /api/* sang BE.
+// Cùng origin nên fetch tự gửi kèm cookie refresh token, không cần CORS hay credentials: "include".
 function buildUrl(path: string, query?: Query) {
-  const url = new URL(API_URL + path);
+  const params = new URLSearchParams();
   for (const [k, v] of Object.entries(query ?? {})) {
-    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
+    if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
   }
-  return url.toString();
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
 }
 
 // ─── Làm mới token ───────────────────────────────────────────────
 // BE dùng refresh token rotation: mỗi refresh token chỉ dùng được MỘT lần. Nếu 3 request cùng nhận 401 rồi cùng gọi
-// /refresh với một token, 2 cái sau sẽ thất bại và người dùng bị đăng xuất oan. Vì vậy mọi nơi dùng chung 1 promise.
+// /refresh với một token, 2 cái sau sẽ thất bại và người dùng bị đăng xuất oan. Vì vậy trong 1 tab dùng chung 1 promise.
+// Giữa các tab: mọi tab dùng CHUNG một cookie → 2 tab mở cùng lúc cũng đụng nhau y như vậy. Web Locks API cho các tab
+// xếp hàng: tab sau chỉ gửi /refresh khi tab trước xong, lúc đó trình duyệt đã ghi cookie mới nên tab sau gửi cookie mới.
 let refreshing: Promise<boolean> | null = null;
 
+async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== "undefined" && navigator.locks) return await navigator.locks.request("movie-refresh", fn);
+  return fn(); // trình duyệt quá cũ: chấp nhận rủi ro 2 tab đụng nhau
+}
+
 function refreshSession(): Promise<boolean> {
-  const session = authStore.get();
-  if (!session) return Promise.resolve(false);
-  refreshing ??= (async () => {
+  refreshing ??= withRefreshLock(async () => {
     try {
-      const res = await fetch(buildUrl("/api/auth/refresh"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: session.refreshToken }),
-      });
+      // Không gửi body: refresh token nằm trong cookie HttpOnly, trình duyệt tự đính kèm
+      const res = await fetch(buildUrl("/api/auth/refresh"), { method: "POST" });
       if (!res.ok) {
         authStore.clear();
         return false;
@@ -73,16 +76,44 @@ function refreshSession(): Promise<boolean> {
       authStore.set((await res.json()) as AuthResponse);
       return true;
     } catch {
-      return false; // mất mạng: giữ phiên, lần sau thử lại
-    } finally {
-      refreshing = null;
+      return false; // mất mạng: giữ phiên (nếu có), lần sau thử lại
     }
-  })();
+  }).finally(() => {
+    refreshing = null;
+  });
   return refreshing;
+}
+
+// ─── Khôi phục phiên khi mở trang / F5 ────────────────────────────
+// Access token chỉ ở RAM nên mỗi lần tải trang là mất → đổi cookie lấy access token mới. Chạy đúng 1 lần mỗi lần tải trang.
+let restoring: Promise<void> | null = null;
+
+export function restoreSession() {
+  restoring ??= (authStore.hasFlag() ? refreshSession() : Promise.resolve(false)).then(() => authStore.markReady());
+  return restoring;
+}
+
+/**
+ * Gọi 1 lần ở Providers: khôi phục phiên + đồng bộ giữa các tab (tab khác đăng nhập → tab này lấy phiên,
+ * tab khác đăng xuất → tab này xoá phiên). Trả về hàm huỷ lắng nghe.
+ */
+export function startSessionSync() {
+  try {
+    localStorage.removeItem("movie.session"); // bản cũ lưu cả refresh token ở đây → xoá cho sạch
+  } catch {}
+  restoreSession();
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== LOGGED_IN_KEY) return;
+    if (e.newValue === "1") refreshSession();
+    else if (authStore.get()) authStore.clear();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
 }
 
 /** Access token sống 15 phút: còn dưới 30 giây thì làm mới trước, đỡ một vòng 401 → refresh → gọi lại. */
 async function getAccessToken() {
+  await restoreSession(); // request bắn ra lúc trang vừa mở: chờ khôi phục phiên xong mới biết có token hay không
   const session = authStore.get();
   if (!session) return null;
   if (parseUtc(session.accessTokenExpiresAt).getTime() - Date.now() < 30_000) {
@@ -134,11 +165,8 @@ export function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Đã có lỗi xảy ra.";
 }
 
-/** Đăng xuất: xoá phiên ở máy trước (người dùng thấy ngay), rồi báo BE thu hồi refresh token. */
+/** Đăng xuất: xoá phiên ở RAM trước (người dùng thấy ngay), rồi để BE thu hồi refresh token + xoá cookie. */
 export async function logout() {
-  const session = authStore.get();
   authStore.clear();
-  if (session) {
-    await api("/api/auth/logout", { method: "POST", body: { refreshToken: session.refreshToken }, auth: false }).catch(() => {});
-  }
+  await api("/api/auth/logout", { method: "POST", auth: false }).catch(() => {});
 }

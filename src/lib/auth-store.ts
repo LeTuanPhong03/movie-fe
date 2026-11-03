@@ -1,72 +1,68 @@
 import type { AuthResponse, UserDto } from "./types";
 
-// Kho phiên đăng nhập: lưu ở localStorage để F5 không mất, phát sự kiện để mọi component cập nhật (useSyncExternalStore).
-// Nghe thêm sự kiện "storage" để đăng xuất ở tab này thì tab kia cũng đăng xuất.
+// Kho phiên đăng nhập — CHỈ nằm trong bộ nhớ (biến JS), không ghi localStorage:
+// - access token trong RAM: F5 là mất, nhưng script độc (XSS) không lục được ở chỗ lưu trữ lâu dài nào.
+// - refresh token nằm trong cookie HttpOnly do BE đặt, JS không đọc được → F5 thì gọi /refresh để lấy lại phiên.
+// Ở localStorage chỉ còn một cờ "đã đăng nhập" (không bí mật): khách chưa đăng nhập khỏi gọi /refresh vô ích,
+// và tab khác nghe sự kiện "storage" của cờ này để đăng nhập / đăng xuất theo.
 
 export interface Session {
   user: UserDto;
   accessToken: string;
-  refreshToken: string;
   accessTokenExpiresAt: string;
 }
 
-const KEY = "movie.session";
-const listeners = new Set<() => void>();
-let cached: Session | null | undefined;
+export const LOGGED_IN_KEY = "movie.loggedIn";
 
-function read(): Session | null {
-  if (cached !== undefined) return cached;
-  try {
-    const raw = localStorage.getItem(KEY);
-    cached = raw ? (JSON.parse(raw) as Session) : null;
-  } catch {
-    cached = null;
-  }
-  return cached;
-}
+const listeners = new Set<() => void>();
+let session: Session | null = null;
+// false cho tới khi lần khôi phục phiên đầu tiên (gọi /refresh lúc mở trang) xong: chưa biết là khách hay đã đăng nhập
+let ready = false;
 
 function emit() {
   listeners.forEach((l) => l());
 }
 
+function setFlag(loggedIn: boolean) {
+  try {
+    if (loggedIn) localStorage.setItem(LOGGED_IN_KEY, "1");
+    else localStorage.removeItem(LOGGED_IN_KEY);
+  } catch {
+    /* ẩn danh chặn localStorage: chỉ mất tính năng đồng bộ giữa các tab */
+  }
+}
+
 export const authStore = {
-  get: (): Session | null => (typeof window === "undefined" ? null : read()),
+  get: (): Session | null => session,
+  isReady: () => ready,
+
+  hasFlag() {
+    try {
+      return localStorage.getItem(LOGGED_IN_KEY) === "1";
+    } catch {
+      return true; // không đọc được cờ thì cứ thử /refresh, tệ nhất là nhận 401
+    }
+  },
 
   set(response: AuthResponse) {
-    cached = {
-      user: response.user,
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      accessTokenExpiresAt: response.accessTokenExpiresAt,
-    };
-    try {
-      localStorage.setItem(KEY, JSON.stringify(cached));
-    } catch {
-      /* chế độ ẩn danh chặn localStorage: vẫn giữ trong bộ nhớ */
-    }
+    session = { user: response.user, accessToken: response.accessToken, accessTokenExpiresAt: response.accessTokenExpiresAt };
+    setFlag(true);
     emit();
   },
 
   clear() {
-    cached = null;
-    try {
-      localStorage.removeItem(KEY);
-    } catch {}
+    session = null;
+    setFlag(false);
+    emit();
+  },
+
+  markReady() {
+    ready = true;
     emit();
   },
 
   subscribe(listener: () => void) {
     listeners.add(listener);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY) {
-        cached = undefined;
-        listener();
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => {
-      listeners.delete(listener);
-      window.removeEventListener("storage", onStorage);
-    };
+    return () => listeners.delete(listener);
   },
 };

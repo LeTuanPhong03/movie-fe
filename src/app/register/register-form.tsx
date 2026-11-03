@@ -8,7 +8,8 @@ import { toast } from "@/lib/notify";
 import { api, ApiError } from "@/lib/api";
 import { authStore } from "@/lib/auth-store";
 import type { AuthResponse } from "@/lib/types";
-import { AuthShell, safeNext } from "@/components/auth-shell";
+import { AuthShell } from "@/components/auth-shell";
+import { safeNext } from "@/lib/safe-next";
 import { Button, Field } from "@/components/ui";
 
 // Luật giống RegisterCommandValidator của BE: kiểm trước ở FE để báo lỗi ngay, BE vẫn kiểm lại (FE có thể bị bỏ qua).

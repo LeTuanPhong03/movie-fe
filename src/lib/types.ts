@@ -12,10 +12,10 @@ export interface UserDto {
   isOwner: boolean;
 }
 
+/** Body của register / login / refresh. Không có refresh token: BE đặt nó vào cookie HttpOnly, JS không đọc được. */
 export interface AuthResponse {
   user: UserDto;
   accessToken: string;
-  refreshToken: string;
   accessTokenExpiresAt: string;
 }
 
@@ -92,7 +92,7 @@ export interface PaymentLinkDto {
   expiresAt: string;
 }
 
-export type PaymentStatus = "Pending" | "Succeeded" | "Failed" | "RefundRequired";
+export type PaymentStatus = "Pending" | "Succeeded" | "Failed" | "RefundRequired" | "Refunded";
 
 export interface VnPayCallbackResult {
   rspCode: string;
@@ -162,3 +162,21 @@ export interface ProblemDetails {
 /** Giới hạn lấy từ Domain của BE (Reservation.MaxSeats, Reservation.HoldMinutes). */
 export const MAX_SEATS = 8;
 export const HOLD_MINUTES = 10;
+/** Reservation.PaidCancelCutoffMinutes: khách chỉ tự huỷ vé ĐÃ thanh toán khi còn hơn chừng này phút tới giờ chiếu. */
+export const PAID_CANCEL_CUTOFF_MINUTES = 120;
+
+export interface RefundDto {
+  paymentId: number;
+  reservationId: number;
+  reservationStatus: ReservationStatus;
+  userEmail: string;
+  userFullName: string;
+  movieTitle: string;
+  startAt: string;
+  amount: number;
+  txnRef: string;
+  providerTransactionNo: string | null;
+  status: PaymentStatus;
+  paidAt: string | null;
+  refundedAt: string | null;
+}

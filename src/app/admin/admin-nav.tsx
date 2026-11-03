@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { BarChart3, CalendarPlus, Clapperboard, DoorOpen, Gauge, ReceiptText, Users } from "lucide-react";
+import { BarChart3, CalendarPlus, Clapperboard, DoorOpen, Gauge, ReceiptText, Undo2, Users } from "lucide-react";
 
 const items = [
   { href: "/admin", label: "Doanh thu", icon: BarChart3 },
   { href: "/admin/capacity", label: "Công suất", icon: Gauge },
   { href: "/admin/reservations", label: "Đơn đặt", icon: ReceiptText },
+  { href: "/admin/refunds", label: "Hoàn tiền", icon: Undo2 },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/movies", label: "Phim", icon: Clapperboard },
   { href: "/admin/showtimes", label: "Suất chiếu", icon: CalendarPlus },

@@ -32,8 +32,3 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
     </div>
   );
 }
-
-/** Chỉ cho phép quay về đường dẫn nội bộ (bắt đầu bằng "/") — chặn kiểu tấn công ?next=https://trang-lua-dao.com */
-export function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
